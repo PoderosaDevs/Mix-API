@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Usuario {
+  id           String       @id @default(uuid())
+  email        String       @unique
+  nome         String
+  senha        String
+  cargo        CargoUsuario @default(OPERADOR)
+  lojas        Loja[]       @relation("GerenteLoja")
+  mixes        MixProduto[]
+  criadoEm     DateTime     @default(now())
+  atualizadoEm DateTime     @updatedAt
+}
+
+enum CargoUsuario {
+  OPERADOR
+  GERENTE
+  ADMIN
+}
+
+model Marca {
+  id    String       @id @default(uuid())
+  nome  String       @unique
+  mixes MixProduto[]
+}
+
+model MixProduto {
+  id        String             @id @default(uuid())
+  nome      String             @unique
+  criadorId String
+  criador   Usuario            @relation(fields: [criadorId], references: [id])
+  marcaId   String
+  marca     Marca              @relation(fields: [marcaId], references: [id])
+  itens     ItemMixTemplate[]
+  lojas     LojaMixAtribuido[]
+  createdAt DateTime           @default(now())
+}
+
+model ItemMixTemplate {
+  id           String     @id @default(uuid())
+  mixProdutoId String
+  mix          MixProduto @relation(fields: [mixProdutoId], references: [id], onDelete: Cascade)
+  produtoId    String
+  nomeProduto  String     // <--- Adicionar este campo
+  createdAt    DateTime   @default(now())
+}
+
+model Loja {
+  id        String             @id @default(uuid())
+  nome      String
+  token     String             @unique
+  gerenteId String?
+  localizacao  String?
+  gerente   Usuario?           @relation("GerenteLoja", fields: [gerenteId], references: [id])
+  mixes     LojaMixAtribuido[]
+  createdAt DateTime           @default(now())
+}
+
+model LojaMixAtribuido {
+  id           String           @id @default(uuid())
+  lojaId       String
+  loja         Loja             @relation(fields: [lojaId], references: [id], onDelete: Cascade)
+  mixProdutoId String
+  mix          MixProduto       @relation(fields: [mixProdutoId], references: [id])
+  itens        ItemMixEstoque[]
+  atribuidoEm  DateTime         @default(now())
+
+  @@unique([lojaId, mixProdutoId])
+}
+
+model ItemMixEstoque {
+  id                String           @id @default(uuid())
+  atribuicaoId      String
+  atribuicao        LojaMixAtribuido @relation(fields: [atribuicaoId], references: [id], onDelete: Cascade)
+  produtoId         String
+  nomeProduto       String           // <--- Adicionar este campo
+  estoqueAtual      Int              @default(0)
+  estoqueDesejado   Int              @default(0)
+  ultimaAtualizacao DateTime         @updatedAt
+}
